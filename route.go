@@ -3,6 +3,7 @@ package coco
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -14,6 +15,10 @@ type Route struct {
 }
 
 func (a *App) NewRoute(path string) *Route {
+	if r, ok := a.routes[path]; ok {
+		return &r
+	}
+
 	return &Route{
 		base: path,
 		hr:   a.baseRouter,
@@ -28,7 +33,14 @@ func (r *Route) Get(path string, handler Handler) {
 
 func (r *Route) getHandle(path string, handler Handler) (fullpath string, handle httprouter.Handle) {
 
-	fullpath = r.base + path
+	path = strings.TrimPrefix(path, "/")
+
+	if strings.HasPrefix(path, ":") {
+		fullpath = fmt.Sprintf("%s/%s", r.base, path)
+	} else {
+		fullpath = r.base + path
+	}
+
 	fmt.Printf("fullpath: %s\n", fullpath)
 	handle = func(w http.ResponseWriter, rq *http.Request, ps httprouter.Params) {
 		fmt.Printf("handle: %s\n", fullpath)
