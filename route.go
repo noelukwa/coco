@@ -1,9 +1,7 @@
 package coco
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -11,7 +9,18 @@ import (
 type Route struct {
 	base string
 	hr   *httprouter.Router
-	// handles map[string]Handle
+
+	// Middleware
+	middleware []Handler
+}
+
+func (r *Route) Use(middleware ...Handler) *Route {
+	r.middleware = append(r.middleware, middleware...)
+	return r
+}
+
+func (r *Route) combineHandlers(handlers ...Handler) []Handler {
+	return append(r.middleware, handlers...)
 }
 
 func (a *App) NewRoute(path string) *Route {
@@ -21,36 +30,25 @@ func (a *App) NewRoute(path string) *Route {
 
 	return &Route{
 		base: path,
-		hr:   a.baseRouter,
-		// handles: make(map[string]Handle),
+		hr:   a.base,
 	}
 }
 
-func (r *Route) Get(path string, handler Handler) {
-	rp, h := r.getHandle(path, handler)
-	r.hr.Handle("GET", rp, h)
+func (r *Route) handle(httpMethod string, path string, handlers []Handler) {
+	handlers = r.combineHandlers(handlers...)
+	r.hr.Handle(httpMethod, r.base+path, func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
+		c := Context{
+			handlers: handlers,
+		}
+
+		response := Response{w}
+		request := Request{req, p}
+
+		c.next(response, &request)
+	})
 }
 
-func (r *Route) getHandle(path string, handler Handler) (fullpath string, handle httprouter.Handle) {
-
-	path = strings.TrimPrefix(path, "/")
-
-	if strings.HasPrefix(path, ":") {
-		fullpath = fmt.Sprintf("%s/%s", r.base, path)
-	} else {
-		fullpath = r.base + path
-	}
-
-	fmt.Printf("fullpath: %s\n", fullpath)
-	handle = func(w http.ResponseWriter, rq *http.Request, ps httprouter.Params) {
-		fmt.Printf("handle: %s\n", fullpath)
-		rw := Response{w: w}
-		req := Request{r: rq, params: ps}
-		next := NextFunc(func(rw Response, r *Request) {
-			fmt.Println("next")
-		})
-		handler(rw, &req, next)
-	}
-	return
-
+// GET method
+func (r *Route) Get(path string, handlers ...Handler) {
+	r.handle("GET", path, handlers)
 }
