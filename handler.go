@@ -1,6 +1,7 @@
 package coco
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -35,7 +36,10 @@ func (r *Request) Params() map[string]string {
 }
 
 type Response struct {
-	w http.ResponseWriter
+	w             http.ResponseWriter
+	headerWritten bool
+
+	ctx Context
 }
 
 // implement http.ResponseWriter interface for Response
@@ -49,10 +53,47 @@ func (r *Response) Write(b []byte) (int, error) {
 
 func (r *Response) WriteHeader(statusCode int) {
 	r.w.WriteHeader(statusCode)
+	r.headerWritten = true
 }
 
-type Handle struct {
-	method string
-	path   string
-	next   NextFunc
+// JSON returns a JSON response
+func (r *Response) JSON(statusCode int, v interface{}) error {
+	r.w.Header().Set("Content-Type", "application/json")
+
+	if !r.headerWritten {
+		r.WriteHeader(statusCode)
+	}
+	return json.NewEncoder(r.w).Encode(v)
+}
+
+// Text returns a text response
+func (r *Response) Text(statusCode int, v string) error {
+	r.w.Header().Set("Content-Type", "text/plain")
+
+	if !r.headerWritten {
+		r.WriteHeader(statusCode)
+	}
+	_, err := r.w.Write([]byte(v))
+	return err
+}
+
+// Render returns a HTML response with a template
+func (r *Response) Render(name string, data interface{}) error {
+
+	store := r.ctx.templateStore
+	if store == nil {
+		return fmt.Errorf("no templates loaded")
+	}
+
+	fmt.Println("rendering template: ", name)
+
+	tmpl, err := store.Get(name)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(tmpl.Name())
+
+	return tmpl.Execute(r.w, data)
+
 }

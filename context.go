@@ -2,6 +2,8 @@ package coco
 
 type Context struct {
 	handlers []Handler
+
+	templateStore *templateStore
 }
 
 // next calls the next handler in the chain if there is one.
