@@ -1,9 +1,12 @@
 package coco
 
 import (
+	"context"
+	"fmt"
+	"html/template"
 	"io/fs"
 	"net/http"
-	"strings"
+	"path"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -30,36 +33,29 @@ type App struct {
 	static StaticRoute
 
 	//TODO: template store
-	templateStore templateStore
+	templates map[string]*template.Template
 }
 
 // GlobalPrefix sets a global prefix for all routes
-func (a *App) GlobalPrefix(prefix string) {
-	a.basePath = strings.TrimSpace(strings.TrimFunc(prefix, func(r rune) bool { return r == '/' }))
+func (a *App) GlobalPrefix(prefix string) *App {
+	if prefix == "" {
+		return a
+	}
+	if prefix[0] != '/' {
+		prefix = "/" + prefix
+	}
+	a.basePath = path.Clean(prefix)
+	return a
 }
 
 func NewApp() (app *App) {
-	router := httprouter.New()
 	app = &App{
 		basePath: "/",
 		routes:   make(map[string]*Route),
-		base:     router,
+		base:     httprouter.New(),
 	}
 	app.Route = app.NewRoute(app.basePath)
 	return
-}
-
-//TODO: LoadTemplates
-func (app *App) LoadTemplates(config TemplateConfig) error {
-
-	err := fs.WalkDir(config.Path, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-
-	return err
 }
 
 //TODO: ServeStatic serves static files from a given directory
@@ -72,13 +68,20 @@ func (a *App) ServeStatic(path string, dir fs.FS) {
 }
 
 // Listen starts an HTTP server
-func (a *App) Listen(addr string) {
-	http.ListenAndServe(addr, a)
-}
+func (a *App) Listen(addr string, ctx context.Context) error {
 
-// ListenTLS starts an HTTPS server
-func (a *App) ListenTLS(addr string, certFile string, keyFile string) {
-	http.ListenAndServeTLS(addr, certFile, keyFile, a)
+	server := &http.Server{
+		Addr:    addr,
+		Handler: a,
+	}
+	go func() {
+		<-ctx.Done()
+		fmt.Println("shutting down server")
+		server.Shutdown(ctx)
+	}()
+
+	fmt.Printf("server listening on %s\n", addr)
+	return server.ListenAndServe()
 }
 
 func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {

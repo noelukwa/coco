@@ -1,8 +1,8 @@
 package coco
 
 import (
-	"fmt"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/julienschmidt/httprouter"
@@ -28,13 +28,15 @@ func (r *Route) combineHandlers(handlers ...Handler) []Handler {
 }
 
 // pathify func turns whatever string to path just to be sure.
-func (a *App) pathify(path string) string {
-	return a.basePath + strings.Trim(path, "/")
+func (a *App) pathify(p string) string {
+	return a.basePath + path.Clean(p)
 }
 
 func (a *App) NewRoute(path string) *Route {
+	if path == "" {
+		path = "/"
+	}
 	path = a.pathify(path)
-	fmt.Printf("new route: %s\n", path)
 	if r, ok := a.routes[path]; ok {
 		return r
 	}
@@ -50,10 +52,9 @@ func (a *App) NewRoute(path string) *Route {
 
 // getfullPath method returns the full path of the route
 func (r *Route) getfullPath(path string) string {
+
 	raw := strings.Trim(path, "/")
 
-	// check if the element at index 1 is a colon
-	// if it is, then it is a parameter
 	if len(raw) > 0 && raw[0] == ':' {
 		return r.base + "/" + raw
 	}
@@ -63,11 +64,10 @@ func (r *Route) getfullPath(path string) string {
 
 func (r *Route) handle(httpMethod string, path string, handlers []Handler) {
 	handlers = r.combineHandlers(handlers...)
-	fmt.Printf("handling path: %s with fullpath: %s\n", path, r.getfullPath(path))
 	r.hr.Handle(httpMethod, r.getfullPath(path), func(w http.ResponseWriter, req *http.Request, p httprouter.Params) {
 		c := Context{
-			handlers:      handlers,
-			templateStore: &r.app.templateStore,
+			handlers:  handlers,
+			templates: r.app.templates,
 		}
 		response := Response{w, false, c}
 		request := Request{req, p}

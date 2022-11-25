@@ -1,47 +1,66 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"strings"
 
 	"github.com/noelukwa/coco"
 )
 
 func main() {
-	app := coco.NewApp()
+	// create a new app and set the global prefix
+	app := coco.NewApp().GlobalPrefix("api/v1/")
 
-	app.Get("/hey", log, func(rw coco.Response, r *coco.Request, _ coco.NextFunc) {
-		rw.JSON(200, map[string]string{"hello": "world"})
+	app.Get("/hey", reqLogger, func(rw coco.Response, r *coco.Request, next coco.NextFunc) {
+		rw.JSON(200, map[string]string{
+			"message": "hello world",
+		})
 	})
 
-	app.Get("/hey/:id", log, func(rw coco.Response, r *coco.Request, _ coco.NextFunc) {
+	// named param
+	app.Get("/users/:name", func(rw coco.Response, r *coco.Request, next coco.NextFunc) {
+		// returns a map of params
+		name := r.Params()["name"]
 
-		rw.JSON(200, map[string]string{"message": "hello " + r.Params()["id"]})
+		rw.JSON(200, map[string]interface{}{
+			"message": fmt.Sprintf("hello %s", name),
+		})
 	})
 
-	users := app.NewRoute("/users")
+	// subroute with prefix
+	fruits := app.NewRoute("/fruits")
 
-	users.Use(userLog)
+	store := []string{"apple", "orange", "banana"}
 
-	users.Get("", log, func(rw coco.Response, r *coco.Request, _ coco.NextFunc) {
+	fruits.Get("/", func(rw coco.Response, r *coco.Request, next coco.NextFunc) {
+		find := r.Query().Get("find")
+		if find == "" {
+			rw.JSON(200, store)
+			return
+		}
 
-		rw.JSON(200, map[string]string{"hello": "world!"})
+		var found []string
+		for _, f := range store {
+			if strings.Contains(f, find) {
+				found = append(found, f)
+			}
+		}
+		rw.JSON(200, map[string]interface{}{
+			"found": found,
+			"total": len(found),
+		})
 	})
 
-	users.Get("/", log, func(rw coco.Response, r *coco.Request, next coco.NextFunc) {
-		rw.JSON(200, map[string]string{"hello": r.Params()["name"]})
-	})
-
-	app.Listen(":8080")
+	if err := app.Listen(":8040", context.Background()); err != nil {
+		log.Fatal(err)
+	}
 }
 
-func log(rw coco.Response, r *coco.Request, next coco.NextFunc) {
-	fmt.Println("enter logging")
+// middleware
+func reqLogger(rw coco.Response, r *coco.Request, next coco.NextFunc) {
+	fmt.Println("request received")
 	next(rw, r)
-	fmt.Println("exit logging")
-}
-
-func userLog(rw coco.Response, r *coco.Request, next coco.NextFunc) {
-	fmt.Println("enter  user logger")
-	next(rw, r)
-	fmt.Println("exiting user logger")
+	fmt.Println("request completed")
 }

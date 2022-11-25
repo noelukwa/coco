@@ -2,8 +2,8 @@ package coco
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -25,9 +25,11 @@ func (r *Request) URL() string {
 	return r.r.URL.String()
 }
 
-func (r *Request) Params() map[string]string {
+func (r *Request) Query() url.Values {
+	return r.r.URL.Query()
+}
 
-	fmt.Printf("params: %v\n", r.params)
+func (r *Request) Params() map[string]string {
 	m := make(map[string]string)
 	for _, p := range r.params {
 		m[p.Key] = p.Value
@@ -75,25 +77,4 @@ func (r *Response) Text(statusCode int, v string) error {
 	}
 	_, err := r.w.Write([]byte(v))
 	return err
-}
-
-// Render returns a HTML response with a template
-func (r *Response) Render(name string, data interface{}) error {
-
-	store := r.ctx.templateStore
-	if store == nil {
-		return fmt.Errorf("no templates loaded")
-	}
-
-	fmt.Println("rendering template: ", name)
-
-	tmpl, err := store.Get(name)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(tmpl.Name())
-
-	return tmpl.Execute(r.w, data)
-
 }
