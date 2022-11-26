@@ -32,7 +32,6 @@ type App struct {
 	//TODO: static files
 	static StaticRoute
 
-	//TODO: template store
 	templates map[string]*template.Template
 }
 
@@ -50,7 +49,7 @@ func (a *App) GlobalPrefix(prefix string) *App {
 
 func NewApp() (app *App) {
 	app = &App{
-		basePath: "/",
+		basePath: "",
 		routes:   make(map[string]*Route),
 		base:     httprouter.New(),
 	}

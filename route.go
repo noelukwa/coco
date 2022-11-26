@@ -58,7 +58,6 @@ func (r *Route) getfullPath(path string) string {
 	if len(raw) > 0 && raw[0] == ':' {
 		return r.base + "/" + raw
 	}
-
 	return r.base + strings.TrimPrefix(path, "/")
 }
 
