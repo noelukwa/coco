@@ -40,6 +40,9 @@ func (app *App) LoadTemplates(fs fs.FS, config *TemplateConfig) (err error) {
 	} else {
 		app.templates, err = tempest.New().LoadFS(fs)
 
+		for name := range app.templates {
+			fmt.Println(name)
+		}
 		return
 	}
 }

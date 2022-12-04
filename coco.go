@@ -17,7 +17,6 @@ type NextFunc func(rw Response, r *Request)
 // Handle is a wrapper for httprouter.Handle
 type Handler func(rw Response, req *Request, next NextFunc)
 
-// TODO: support template rendering
 type StaticRoute struct {
 	*Route
 	pathToFiles string

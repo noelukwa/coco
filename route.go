@@ -1,6 +1,7 @@
 package coco
 
 import (
+	"io/fs"
 	"net/http"
 	"path"
 	"strings"
@@ -131,13 +132,16 @@ func (r *Route) Group(path string, handlers ...Handler) *Route {
 }
 
 // Static method
-func (r *Route) Static(path string, root string) {
+func (r *Route) Static(root fs.FS, path string) {
+	fileServer := http.FileServer(http.FS(root))
 
-	r.hr.ServeFiles(r.base+path, http.Dir(root))
+	r.hr.GET(r.base+path, func(w http.ResponseWriter, req *http.Request, ps httprouter.Params) {
+		fileServer.ServeHTTP(w, req)
+	})
 }
 
 // File method
-func (r *Route) File(path string, file string) {
+// func (r *Route) File(files fs.FS, path string) {
 
-	r.hr.ServeFiles(r.base+path, http.Dir(file))
-}
+// 	r.hr.ServeFiles(r.base+path, http.Dir(file))
+// }
