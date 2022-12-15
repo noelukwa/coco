@@ -38,6 +38,7 @@ func (a *App) NewRoute(path string) *Route {
 		path = "/"
 	}
 	path = a.pathify(path)
+
 	if r, ok := a.routes[path]; ok {
 		return r
 	}
@@ -108,17 +109,6 @@ func (r *Route) Options(path string, handlers ...Handler) {
 
 // HEAD method
 func (r *Route) Head(path string, handlers ...Handler) {
-	r.handle("HEAD", path, handlers)
-}
-
-// Any method
-func (r *Route) Any(path string, handlers ...Handler) {
-	r.handle("GET", path, handlers)
-	r.handle("POST", path, handlers)
-	r.handle("PUT", path, handlers)
-	r.handle("DELETE", path, handlers)
-	r.handle("PATCH", path, handlers)
-	r.handle("OPTIONS", path, handlers)
 	r.handle("HEAD", path, handlers)
 }
 

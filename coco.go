@@ -42,6 +42,7 @@ func (a *App) GlobalPrefix(prefix string) *App {
 	if prefix[0] != '/' {
 		prefix = "/" + prefix
 	}
+	a.Route.base = prefix
 	a.basePath = path.Clean(prefix)
 	return a
 }
@@ -78,7 +79,6 @@ func (a *App) Listen(addr string, ctx context.Context) error {
 		server.Shutdown(ctx)
 	}()
 
-	fmt.Printf("server listening on %s\n", addr)
 	return server.ListenAndServe()
 }
 
